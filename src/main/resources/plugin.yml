@@ -1,0 +1,38 @@
+main: com.cavetale.quidditch.QuidditchPlugin
+name: Quidditch
+
+version: ${version}
+api-version: '1.20'
+
+author: StarTux
+website: https://github.com/StarTux/Quidditch
+description: Quidditch Plugin
+
+depend: [Core, Mytems, WorldMarker, Area]
+softdepend: []
+
+commands:
+
+  quidditch:
+    aliases: []
+    description: Quidditch Command
+    permission: quidditch.quidditch
+    usage: |-
+      /quidditch
+
+  quidditchadmin:
+    aliases: [qua]
+    description: Quidditch Admin Command
+    permission: quidditch.admin
+    usage: |-
+      /quidditch
+
+permissions:
+
+  quidditch.quidditch:
+    description: Use /quidditch
+    default: op
+
+  quidditch.admin:
+    description: Use /quidditchadmin
+    default: op
