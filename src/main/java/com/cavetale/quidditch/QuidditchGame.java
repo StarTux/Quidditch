@@ -45,6 +45,8 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
@@ -86,6 +88,7 @@ public final class QuidditchGame {
         spawnStuff();
         task = Bukkit.getScheduler().runTaskTimer(plugin(), this::tick, 1L, 1L);
         gameStarted = System.currentTimeMillis();
+        changeState(QuidditchState.PLAY);
     }
 
     public void disable() {
@@ -241,6 +244,7 @@ public final class QuidditchGame {
     private void loadPlayers() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             players.put(player.getUniqueId(), new QuidditchPlayer(player));
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
         }
         List<QuidditchPlayer> allPlayers = new ArrayList<>(players.values());
         Collections.shuffle(allPlayers);
@@ -270,7 +274,6 @@ public final class QuidditchGame {
                 prepPlayer(player, player.getPlayer());
             }
         }
-        state = QuidditchState.PLAY;
     }
 
     private void prepPlayer(QuidditchPlayer quidditchPlayer, Player player) {
@@ -374,6 +377,23 @@ public final class QuidditchGame {
         }
     }
 
+    public void removeBallsFromGround() {
+        for (Entity entity : world.getEntities()) {
+            if (entity instanceof ThrowableProjectile thrown) {
+                final ItemStack item = thrown.getItem();
+                if (item == null) continue;
+                if (QuidditchBallType.ofItem(item) != null) {
+                    entity.remove();
+                }
+            } else if (entity instanceof Item itemEntity) {
+                final ItemStack item = itemEntity.getItemStack();
+                if (QuidditchBallType.ofItem(item) != null) {
+                    entity.remove();
+                }
+            }
+        }
+    }
+
     public int countBalls(QuidditchBallType type) {
         int result = 0;
         for (Player player : world.getPlayers()) {
@@ -381,7 +401,10 @@ public final class QuidditchGame {
                 final ItemStack item = player.getInventory().getItem(i);
                 if (item == null) continue;
                 if (QuidditchBallType.ofItem(item) == type) {
-                    result += 1;
+                    result += item.getAmount();
+                    if (type == QuidditchBallType.QUAFFLE) {
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 20, 0, true, false, true));
+                    }
                 }
             }
         }
@@ -390,12 +413,12 @@ public final class QuidditchGame {
                 final ItemStack item = thrown.getItem();
                 if (item == null) continue;
                 if (QuidditchBallType.ofItem(item) == type) {
-                    result += 1;
+                    result += item.getAmount();
                 }
             } else if (entity instanceof Item itemEntity) {
                 final ItemStack item = itemEntity.getItemStack();
                 if (QuidditchBallType.ofItem(item) == type) {
-                    result += 1;
+                    result += item.getAmount();
                 }
             }
         }
@@ -431,7 +454,8 @@ public final class QuidditchGame {
         announce(empty());
         announce(Title.title(text("10 points for ", scoreTeam.getHouse().getTextColor()),
                              scoreTeam.getHouse().getDisplayName()));
-        state = QuidditchState.GOAL;
+        changeState(QuidditchState.GOAL);
+        stateStarted = System.currentTimeMillis();
         log(quaffle.getThrower().getName() + " scored a goal for " + scoreTeam.getHouse());
     }
 
@@ -476,12 +500,12 @@ public final class QuidditchGame {
         final int bludgerCount = countBalls(QuidditchBallType.BLUDGER);
         if (bludgerCount < 2) {
             final var loc = randomSpawnVector().toCenterLocation(world);
-            world.dropItem(loc, QuidditchBallType.BLUDGER.createItemStack());
+            world.dropItem(loc, QuidditchBallType.BLUDGER.createItemStack()).setGlowing(true);
         }
         final int quaffleCount = countBalls(QuidditchBallType.QUAFFLE);
         if (quaffleCount < 1) {
             final var loc = randomSpawnVector().toCenterLocation(world);
-            world.dropItem(loc, QuidditchBallType.QUAFFLE.createItemStack());
+            world.dropItem(loc, QuidditchBallType.QUAFFLE.createItemStack()).setGlowing(true);
         }
         // Snitch stuff
         if (snitch != null) {
@@ -500,12 +524,11 @@ public final class QuidditchGame {
                 snitch.remove();
                 snitch = null;
             }
-            snitchCooldown = now + 60_000L;
-            // final int snitchChance = (int) (gameDuration / 60_000L);
-            // final int snitchRoll = random.nextInt(5);
-            // final var snitchSuccess = snitchRoll < snitchChance;
-            // plugin().getLogger().info("Snitch " + snitchRoll + "/" + snitchChance + " => " + snitchSuccess);
-            final var snitchSuccess = true;
+            snitchCooldown = now + 120_000L;
+            final int snitchChance = (int) (gameDuration / 60_000L);
+            final int snitchRoll = random.nextInt(5);
+            final var snitchSuccess = snitchRoll <= snitchChance;
+            plugin().getLogger().info("Snitch " + snitchRoll + "/" + snitchChance + " => " + snitchSuccess);
             if (snitchSuccess) {
                 final var list = new ArrayList<Vec3i>(snitchBlocks);
                 final var vec = list.get(random.nextInt(list.size()));
@@ -522,7 +545,7 @@ public final class QuidditchGame {
 
     private QuidditchState tickGoal() {
         if (stateDuration >= 10_000L) {
-            removeAllBalls();
+            removeBallsFromGround();
             return QuidditchState.PLAY;
         }
         return null;
@@ -578,6 +601,7 @@ public final class QuidditchGame {
         if (type == null) return;
         event.setCancelled(true);
         final var dropped = thrown.getWorld().dropItem(thrown.getLocation(), type.createItemStack());
+        dropped.setGlowing(true);
         dropped.setPickupDelay(0);
         dropped.setPersistent(false);
         thrown.remove();
@@ -601,6 +625,9 @@ public final class QuidditchGame {
                 target.leaveVehicle();
             } else if (type == QuidditchBallType.BLUDGER && role == QuidditchRole.CHASER) {
                 target.leaveVehicle();
+            }
+            if (type == QuidditchBallType.QUAFFLE && role == QuidditchRole.KEEPER) {
+                thrown.remove();
             }
         }
     }
@@ -714,7 +741,7 @@ public final class QuidditchGame {
                 snitch = null;
             }
             final var team = quidditchPlayer.getTeam();
-            state = QuidditchState.GAME_OVER;
+            changeState(QuidditchState.GAME_OVER);
             quidditchPlayer.getTeam().addScore(150);
             announce(empty());
             announce(textOfChildren(text(player.getName() + " caught the Golden Snitch for ", GOLD),

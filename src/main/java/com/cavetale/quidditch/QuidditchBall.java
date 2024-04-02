@@ -113,6 +113,7 @@ public final class QuidditchBall {
             final QuidditchTeam goalTeam = game.getGoalTeam(block);
             if (goalTeam != null) {
                 game.goal(goalTeam, this);
+                entity.remove();
                 return;
             }
             if (block.equals(goalBlock)) break;
