@@ -97,7 +97,7 @@ public final class QuidditchBall {
             .multiply(speed);
         entity.setVelocity(newVelo);
         final var dust = new Particle.DustOptions(thrower.getTeam().getHouse().getBukkitColor(), 1f);
-        entity.getWorld().spawnParticle(Particle.REDSTONE, newLocation, 1, 0.0, 0.0, 0.0, 0.0, dust);
+        entity.getWorld().spawnParticle(Particle.DUST, newLocation, 1, 0.0, 0.0, 0.0, 0.0, dust);
     }
 
     private void tickQuaffle() {

@@ -619,7 +619,7 @@ public final class QuidditchGame {
                     if (QuidditchBallType.ofItem(hasItem) == null) continue;
                     target.getInventory().setItem(i, null);
                 }
-                world.spawnParticle(Particle.EXPLOSION_LARGE, target.getLocation(), 8, 1.0, 1.0, 1.0, 0.0);
+                world.spawnParticle(Particle.EXPLOSION, target.getLocation(), 8, 1.0, 1.0, 1.0, 0.0);
                 world.playSound(target.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
             } else if (type == QuidditchBallType.BLUDGER && role == QuidditchRole.BEATER) {
                 target.leaveVehicle();
