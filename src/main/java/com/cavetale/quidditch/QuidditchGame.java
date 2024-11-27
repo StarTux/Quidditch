@@ -280,7 +280,7 @@ public final class QuidditchGame {
         player.leaveVehicle();
         player.setGameMode(GameMode.ADVENTURE);
         player.getInventory().clear();
-        player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+        player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
         player.setFoodLevel(20);
         player.setSaturation(20f);
         player.setFallDistance(0);
@@ -536,7 +536,7 @@ public final class QuidditchGame {
                 snitch = world.spawn(vec.toCenterLocation(world), Allay.class, e -> {
                         e.setPersistent(false);
                         e.setRemoveWhenFarAway(false);
-                        e.getAttribute(Attribute.GENERIC_FLYING_SPEED).setBaseValue(0.3);
+                        e.getAttribute(Attribute.FLYING_SPEED).setBaseValue(0.3);
                     });
             }
         }
